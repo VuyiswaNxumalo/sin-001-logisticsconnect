@@ -26,6 +26,18 @@ public class IngestionServiceApp {
     private static final Set<String> TRUE_VALUES = Set.of("y", "yes", "true", "1");
     private static final Set<String> FALSE_VALUES = Set.of("n", "no", "false", "0");
 
+    private static final Map<String, String> PROVINCE_CANONICAL = Map.ofEntries(
+            Map.entry("gauteng", "Gauteng"),
+            Map.entry("westerncape", "Western Cape"),
+            Map.entry("kwazulunatal", "KwaZulu-Natal"),
+            Map.entry("freestate", "Free State"),
+            Map.entry("easterncape", "Eastern Cape"),
+            Map.entry("limpopo", "Limpopo"),
+            Map.entry("northwest", "North West"),
+            Map.entry("mpumalanga", "Mpumalanga"),
+            Map.entry("northerncape", "Northern Cape")
+    );
+
     public static void main(String[] args) throws Exception {
         List<HubRecord> hubs = loadAndCleanHubs();
 
@@ -65,7 +77,7 @@ public class IngestionServiceApp {
 
     private static HubRecord cleanRow(String[] row) {
         String hubId = normalizeSpacing(row[0]).toUpperCase();
-        String province = titleCase(normalizeSpacing(row[1]));
+        String province = normalizeProvince(row[1]);
         String sortingCenter = titleCase(normalizeSpacing(row[2]));
         String rawActive = normalizeSpacing(row[3]);
 
@@ -97,6 +109,14 @@ public class IngestionServiceApp {
     private static String normalizeSpacing(String value) {
         if (value == null) return "";
         return value.trim().replaceAll("\\s+", " ");
+    }
+
+    private static String normalizeProvince(String raw) {
+        String cleaned = normalizeSpacing(raw);
+        if (cleaned.isEmpty()) return cleaned;
+
+        String key = cleaned.toLowerCase().replaceAll("[-\\s]", "");
+        return PROVINCE_CANONICAL.getOrDefault(key, titleCase(cleaned));
     }
 
     private static String titleCase(String value) {
