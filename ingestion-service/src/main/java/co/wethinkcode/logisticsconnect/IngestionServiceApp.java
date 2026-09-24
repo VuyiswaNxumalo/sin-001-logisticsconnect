@@ -19,6 +19,13 @@ public class IngestionServiceApp {
             String notes
     ) {}
 
+    private static final Set<String> PLACEHOLDER_VALUES = Set.of(
+            "n/a", "na", "tbd", "unknown", "-", "nan", ""
+    );
+
+    private static final Set<String> TRUE_VALUES = Set.of("y", "yes", "true", "1");
+    private static final Set<String> FALSE_VALUES = Set.of("n", "no", "false", "0");
+
     public static void main(String[] args) throws Exception {
         List<HubRecord> hubs = loadAndCleanHubs();
 
@@ -62,8 +69,29 @@ public class IngestionServiceApp {
         String sortingCenter = titleCase(normalizeSpacing(row[2]));
         String rawActive = normalizeSpacing(row[3]);
 
-        // Boolean parsing added in the next commit - for now, pass through.
-        return new HubRecord(hubId, province, sortingCenter, null, "active parsing: TODO");
+        BooleanResult active = parseBoolean(rawActive);
+
+        return new HubRecord(hubId, province, sortingCenter, active.value, active.note);
+    }
+
+    private record BooleanResult(Boolean value, String note) {}
+
+    private static BooleanResult parseBoolean(String raw) {
+        String normalized = raw.trim().toLowerCase();
+
+        if (PLACEHOLDER_VALUES.contains(normalized)) {
+            return new BooleanResult(null,
+                    "active was missing/placeholder ('" + raw + "') - flagged for follow-up");
+        }
+        if (TRUE_VALUES.contains(normalized)) {
+            return new BooleanResult(true, null);
+        }
+        if (FALSE_VALUES.contains(normalized)) {
+            return new BooleanResult(false, null);
+        }
+
+        return new BooleanResult(null,
+                "active had an unrecognized value (\'" + raw + "\') - flagged for follow-up");
     }
 
     private static String normalizeSpacing(String value) {
